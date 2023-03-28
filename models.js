@@ -29,11 +29,11 @@ const User = mongoose.model("User", userSchema);
 
 function logs() {}
 
-const CreateUser = async (username) => {
+const createUser = async (username) => {
   try {
     const user = await User.findOne({ username: username });
     if (user) {
-      console.err("User already exists");
+      console.error("User already exists");
       return user;
     }
     const newUser = new User({ username: username });
@@ -49,7 +49,8 @@ const CreateUser = async (username) => {
 };
 
 module.exports = {
+  User,
   main,
-  CreateUser,
+  createUser,
   logs,
 };
