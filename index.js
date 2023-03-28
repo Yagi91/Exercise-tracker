@@ -3,7 +3,7 @@ const app = express();
 const cors = require("cors");
 require("dotenv").config();
 const bodyParser = require("body-parser");
-const { main, createUser, logs, User } = require("./models.js");
+const { main, createUser, logs, User, addExercise } = require("./models.js");
 
 //status codes
 //200 - OK
@@ -50,9 +50,32 @@ app
     }
   });
 
-// app.route("/api/users/:_id/exercises").post(async (req, res) => {
+app.route("/api/users/:_id/exercises").post(async (req, res) => {
+  const description = req.body.description;
+  const duration = req.body.duration;
+  const date = req.body.date;
+  const id = req.params._id;
 
-// });
+  if (!description)
+    return res.status(400).json({ error: "Description is required" });
+  if (!duration) return res.status(400).json({ error: "Duration is required" });
+  if (!date) {
+    date = new Date().toDateString();
+  }
+  if (id.length !== 24) return res.status(400).json({ error: "Invalid ID" });
+  const durationsIsNumber = !isNaN(duration);
+  const dateIsValid = new Date(date).toString() !== "Invalid Date";
+
+  try {
+    if (!durationsIsNumber) throw new Error("Duration must be a number");
+    if (!dateIsValid) throw new Error("Date is invalid");
+    const newExercise = await addExercise(id, description, duration, date);
+    res.status(201).json(newExercise);
+  } catch (err) {
+    console.error(err);
+    res.status(404).json({ error: err });
+  }
+});
 
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log("Your app is listening on port " + listener.address().port);
