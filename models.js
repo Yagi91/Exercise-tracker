@@ -58,6 +58,14 @@ const createUser = async (username) => {
 
 const addExercise = async (id, description, duration, date) => {
   try {
+    if (!date || !description || !duration) {
+      console.error(
+        "Please fill in at least the _id, description and duration"
+      );
+      throw new Error(
+        "Please fill in at least the _id, description and duration"
+      );
+    }
     let newDate = new Date(date).toDateString();
     let _user = await User.findById(id);
     if (!_user) {
@@ -66,15 +74,6 @@ const addExercise = async (id, description, duration, date) => {
     }
     _user.count = _user.count + 1;
     _user.log.push({ description, duration, date: newDate });
-    // _user.update({
-    //   $push: {
-    //     log: {
-    //       description: description,
-    //       duration: duration,
-    //       date: newDate,
-    //     },
-    //   },
-    // });
     const savedUser = await _user.save();
     return {
       user: savedUser.username,
