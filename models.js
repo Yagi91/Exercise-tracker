@@ -91,10 +91,30 @@ const addExercise = async (id, description, duration, date) => {
   }
 };
 
+const getLogs = async (id, from, to, limit) => {
+  try {
+    const _user = await User.findById(id);
+    if (!_user) {
+      console.error("User does not exist");
+      throw new Error("User does not exist");
+    }
+    if (from && to && limit) {
+      _user.log = _user.log
+        .filter((log) => log.date >= from && log.date <= to)
+        .slice(0, limit);
+    }
+    return _user;
+  } catch (err) {
+    console.error(err);
+    return err;
+  }
+};
+
 module.exports = {
   User,
   main,
   createUser,
   logs,
   addExercise,
+  getLogs,
 };

@@ -3,7 +3,14 @@ const app = express();
 const cors = require("cors");
 require("dotenv").config();
 const bodyParser = require("body-parser");
-const { main, createUser, logs, User, addExercise } = require("./models.js");
+const {
+  main,
+  createUser,
+  logs,
+  User,
+  addExercise,
+  getLogs,
+} = require("./models.js");
 
 //status codes
 //200 - OK
@@ -25,6 +32,8 @@ app.use(bodyParser.urlencoded({ extended: false })); // parse application/json
 app.use(bodyParser.json());
 
 // Your first API endpoint
+
+const validDateFormat = /^\d{4}-\d{2}-\d{2}$/; //date format YYYY-MM-DD
 
 app.get("/api/hello", (req, res) => {
   res.json({ greeting: "hello API" });
@@ -57,24 +66,49 @@ app.route("/api/users/:_id/exercises").post(async (req, res) => {
   const duration = req.body.duration;
   const date = req.body.date || new Date().toDateString();
   const id = req.params._id;
-  const validDateFormat = /^\d{4}-\d{2}-\d{2}$/; //date format YYYY-MM-DD
 
-  if (!description)
-    return res.status(400).json({ error: "Description is required" });
-  if (!duration) return res.status(400).json({ error: "Duration is required" });
-
-  if (id.length !== 24) return res.status(400).json({ error: "Invalid ID" });
   const durationsIsNumber = !isNaN(duration);
   const dateIsValid = new Date(date).toString() !== "Invalid Date";
   const dateFormatIsValid = validDateFormat.test(date);
   console.log(dateIsValid, date);
 
+  if (!description)
+    return res.status(400).json({ error: "Description is required" });
+  if (!duration && !durationsIsNumber)
+    return res.status(400).json({ error: "Duration is required" });
+  if (id.length !== 24) return res.status(400).json({ error: "Invalid ID" });
+  if (!dateIsValid && !dateFormatIsValid)
+    return res.status(400).json({ error: "Invalid Date Format" });
+
   try {
-    if (!durationsIsNumber) throw new Error("Duration must be a number");
-    if (!dateIsValid && !dateFormatIsValid) throw new Error("Date is invalid");
     const newDate = new Date(date).toDateString();
     const newExercise = await addExercise(id, description, duration, newDate);
     res.status(201).json(newExercise);
+  } catch (err) {
+    console.error(err);
+    res.status(404).json({ error: err });
+  }
+});
+
+app.get("/api/users/:_id/logs", async (req, res) => {
+  const id = req.params._id;
+  const from = req.query.from;
+  const to = req.query.to;
+  const limit = req.query.limit;
+  if (id.length !== 24) return res.status(400).json({ error: "Invalid ID" });
+  try {
+    if (from && to && limit) {
+      if (
+        !validDateFormat.test(from) ||
+        !validDateFormat.test(to) ||
+        isNaN(limit)
+      )
+        return res.status(400).json({ error: "Invalid Query" });
+      const logs = await getLogs(id, from, to, limit);
+      return res.status(200).json(logs);
+    }
+    const logs = await getLogs(id);
+    res.status(200).json(logs);
   } catch (err) {
     console.error(err);
     res.status(404).json({ error: err });
