@@ -103,6 +103,7 @@ const getLogs = async (id, from, to, limit) => {
         .filter((log) => log.date >= from && log.date <= to)
         .slice(0, limit);
     }
+    console.log("users logs filtered", _user.log);
     return _user;
   } catch (err) {
     console.error(err);
