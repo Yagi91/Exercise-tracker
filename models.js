@@ -99,11 +99,24 @@ const getLogs = async (id, from, to, limit) => {
       throw new Error("User does not exist");
     }
     if (from && to && limit) {
-      _user.log = _user.log
-        .filter((log) => log.date >= from && log.date <= to)
-        .slice(0, limit);
+      const fromDate = new Date(from);
+      const toDate = new Date(to);
+      // let filteredUser = await User.find({
+      //   _id: id,
+      //   "log.date": { $gte: fromDate, $lte: toDate },
+      // }).limit(limit);
+      console.log(_user.log[0].date);
+      _user.log = _user.log.filter((log) => new Date(log.date) >= fromDate);
+      _user.log = _user.log.filter((log) => log.date <= toDate);
+      _user.log = _user.log.slice(0, limit);
+      console.log("id, from, to, limit ", id, from, to, limit);
+      console.log("filteredUser", _user.log);
+      return _user;
     }
-    console.log("users logs filtered", _user.log);
+    //   //   .filter((log) => log.date >= from && log.date <= to)
+    //   //   .slice(0, limit);
+    // }
+    // console.log("users logs filtered", _user.log);
     return _user;
   } catch (err) {
     console.error(err);
