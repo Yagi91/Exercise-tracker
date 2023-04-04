@@ -3,14 +3,7 @@ const app = express();
 const cors = require("cors");
 require("dotenv").config();
 const bodyParser = require("body-parser");
-const {
-  main,
-  createUser,
-  logs,
-  User,
-  addExercise,
-  getLogs,
-} = require("./models.js");
+const { main, createUser, User, addExercise, getLogs } = require("./models.js");
 
 //status codes
 //200 - OK
@@ -22,7 +15,6 @@ const {
 // Basic Configuration
 
 main(); //connect to db
-logs();
 app.use(cors()); //To prevent cross-origin errors
 app.use(express.static("public")); //To serve static assets
 app.get("/", (req, res) => {

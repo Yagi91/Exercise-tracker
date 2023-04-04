@@ -147,7 +147,6 @@ module.exports = {
   User,
   main,
   createUser,
-  logs,
   addExercise,
   getLogs,
 };
