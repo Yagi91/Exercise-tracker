@@ -38,6 +38,8 @@ const validDateFormat = /^\d{4}-\d{2}-\d{2}$/; //date format YYYY-MM-DD
 app.get("/api/hello", (req, res) => {
   res.json({ greeting: "hello API" });
 });
+
+//create new user
 app
   .route("/api/users")
   .post(async (req, res) => {
@@ -61,6 +63,7 @@ app
     }
   });
 
+//add exercise
 app.route("/api/users/:_id/exercises").post(async (req, res) => {
   const description = req.body.description;
   const duration = req.body.duration;
@@ -70,18 +73,19 @@ app.route("/api/users/:_id/exercises").post(async (req, res) => {
   const durationsIsNumber = !isNaN(duration);
   const dateIsValid = new Date(date).toString() !== "Invalid Date";
   const dateFormatIsValid = validDateFormat.test(date);
-  console.log(dateIsValid, date);
 
   if (!description)
+    //description is required
     return res.status(400).json({ error: "Description is required" });
   if (!duration && !durationsIsNumber)
+    //duration must be a number
     return res.status(400).json({ error: "Duration is required" });
-  if (id.length !== 24) return res.status(400).json({ error: "Invalid ID" });
+  if (id.length !== 24) return res.status(400).json({ error: "Invalid ID" }); //A valid mongoDB id is 24 characters long
   if (!dateIsValid && !dateFormatIsValid)
     return res.status(400).json({ error: "Invalid Date Format" });
 
   try {
-    const newDate = new Date(date).toDateString();
+    const newDate = new Date(date).toDateString(); //convert date to short date string ex: Tue Jun 01 2021
     const newExercise = await addExercise(id, description, duration, newDate);
     res.status(201).json(newExercise);
   } catch (err) {
@@ -90,26 +94,23 @@ app.route("/api/users/:_id/exercises").post(async (req, res) => {
   }
 });
 
+//get user logs
 app.get("/api/users/:_id/logs", async (req, res) => {
-  console.log("Entered logs");
   const id = req.params._id;
   const from = req.query.from;
   const to = req.query.to;
-  const limit = req.query.limit || 0;
+  const limit = req.query.limit;
   if (id.length !== 24) return res.status(400).json({ error: "Invalid ID" });
   try {
-    console.log("Entered try");
     if (from || to || limit) {
-      console.log("Entered if");
       if (
+        //if any of the query params are invalid return 400
         (!validDateFormat.test(from) && from) ||
         (!validDateFormat.test(to) && to) ||
-        isNaN(limit)
+        (isNaN(limit) && limit)
       ) {
-        console.log("Entered if if");
         return res.status(400).json({ error: "Invalid Query" });
       }
-      console.log("index.js", from, to, limit);
       const logs = await getLogs(id, from, to, limit);
       return res.status(200).json(logs);
     }

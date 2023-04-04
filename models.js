@@ -18,25 +18,28 @@ async function main() {
   }
 }
 
+//create schema
 const logsSchema = new Schema({
   description: { type: String, required: true },
   duration: { type: Number, required: true },
   date: { type: String, required: true },
 });
 
+//create model
 const userSchema = mongoose.Schema({
   username: { type: String, required: true, unique: true },
   description: { type: String },
   duration: { type: Number },
   date: { type: String },
   count: { type: Number, default: 0 },
-  log: [logsSchema],
+  log: [logsSchema], //{ type: Array, default: [] },
 });
 
 const User = mongoose.model("User", userSchema);
 
-function logs() {}
+// function logs() {}
 
+//create new user
 const createUser = async (username) => {
   try {
     const user = await User.findOne({ username: username });
@@ -45,7 +48,8 @@ const createUser = async (username) => {
       return user;
     }
     const newUser = new User({ username: username });
-    const savedUser = await newUser.save();
+    const savedUser = await newUser.save(); //save to db
+    console.log("New user created", savedUser);
     return savedUser;
   } catch (err) {
     console.error(
@@ -58,6 +62,7 @@ const createUser = async (username) => {
 
 const addExercise = async (id, description, duration, date) => {
   try {
+    //check if all required fields are filled
     if (!date || !description || !duration) {
       console.error(
         "Please fill in at least the _id, description and duration"
@@ -66,15 +71,15 @@ const addExercise = async (id, description, duration, date) => {
         "Please fill in at least the _id, description and duration"
       );
     }
-    let newDate = new Date(date).toDateString();
-    console.log(newDate);
+    let newDate = new Date(date).toDateString(); //date format example: "Mon Jan 01 2001"
+
     let _user = await User.findById(id);
     if (!_user) {
       console.error("User does not exist");
       throw new Error("User does not exist");
     }
     _user.count = _user.count + 1;
-    _user.log.push({ description, duration, date: newDate });
+    _user.log.push({ description, duration, date: newDate }); //Add new exercise to the log
     const savedUser = await _user.save();
     return {
       username: savedUser.username,
@@ -99,75 +104,39 @@ const getLogs = async (id, from, to, limit) => {
       console.error("User does not exist");
       throw new Error("User does not exist");
     }
-    if (from || to || limit) {
-      console.log("limit exists", limit);
-      const fromDate = from ? new Date(from) : new Date(0);
-      const toDate = to ? Date(to) : new Date();
-      const numLimit = limit ? Number(limit) : 10000;
-      console.log("queried", fromDate, toDate, limit);
-      const user = await User.aggregate([
-        { $match: { _id: new mongoose.Types.ObjectId(id) } },
-        {
-          $project: {
-            username: 1,
-            count: 1,
-            //filter the log
-            log: {
-              $filter: {
-                input: "$log",
-                as: "log",
-                // limit: numLimit,
-                cond: {
-                  $and: [
-                    {
-                      $gte: [
-                        { $dateFromString: { dateString: "$$log.date" } },
-                        fromDate,
-                      ],
-                    },
-                    {
-                      $lte: [
-                        { $dateFromString: { dateString: "$$log.date" } },
-                        toDate,
-                      ],
-                    },
-                  ],
-                },
-              },
-            },
-          },
-        },
-        {
-          $project: {
-            username: 1,
-            count: 1,
-            //limit the log
-            log: { $slice: ["$log", numLimit] },
-          },
-        },
-        {
-          $project: {
-            username: 1,
-            count: 1,
-            //remove the _id from the log
-            log: {
-              $map: {
-                input: "$log",
-                as: "log",
-                in: {
-                  description: "$$log.description",
-                  duration: "$$log.duration",
-                  date: "$$log.date",
-                },
-              },
-            },
-          },
-        },
-      ]);
-      console.log("user", user);
-      return user[0];
+    if (!from && !to && !limit) return _user;
+
+    let fromDate = new Date(from);
+    let toDate = new Date(to);
+
+    let filteredLogs = _user.log; //Initialize the filtered logs to the user's logs
+
+    if (fromDate != "Invalid Date" || toDate != "Invalid Date") {
+      //Check if any of the dates are valid
+      if (!fromDate) {
+        fromDate = new Date(0); //If the from date is not valid, set it to the beginning of time
+      }
+      if (!toDate) {
+        toDate = new Date(); //If the to date is not valid, set it to the current date
+      }
+
+      //Update the filtered logs to only include logs between the from and to dates
+      filteredLogs = _user.log.filter((log) => {
+        let logDate = new Date(log.date);
+        return logDate >= fromDate && logDate <= toDate;
+      });
     }
-    return _user;
+
+    if (limit) {
+      filteredLogs = filteredLogs.slice(0, limit); //limit the number of logs
+    }
+    //return the filtered logs
+    return {
+      _id: _user._id,
+      username: _user.username,
+      count: filteredLogs.length, //make the count equal to the number of filtered logs
+      log: filteredLogs,
+    };
   } catch (err) {
     console.error(err);
     return err;
