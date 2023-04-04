@@ -67,6 +67,7 @@ const addExercise = async (id, description, duration, date) => {
       );
     }
     let newDate = new Date(date).toDateString();
+    console.log(newDate);
     let _user = await User.findById(id);
     if (!_user) {
       console.error("User does not exist");
@@ -76,7 +77,7 @@ const addExercise = async (id, description, duration, date) => {
     _user.log.push({ description, duration, date: newDate });
     const savedUser = await _user.save();
     return {
-      user: savedUser.username,
+      username: savedUser.username,
       description,
       duration: Number(duration),
       date: newDate,
@@ -98,25 +99,74 @@ const getLogs = async (id, from, to, limit) => {
       console.error("User does not exist");
       throw new Error("User does not exist");
     }
-    if (from && to && limit) {
-      const fromDate = new Date(from);
-      const toDate = new Date(to);
-      // let filteredUser = await User.find({
-      //   _id: id,
-      //   "log.date": { $gte: fromDate, $lte: toDate },
-      // }).limit(limit);
-      console.log(_user.log[0].date);
-      _user.log = _user.log.filter((log) => new Date(log.date) >= fromDate);
-      _user.log = _user.log.filter((log) => log.date <= toDate);
-      _user.log = _user.log.slice(0, limit);
-      console.log("id, from, to, limit ", id, from, to, limit);
-      console.log("filteredUser", _user.log);
-      return _user;
+    if (from || to || limit) {
+      console.log("limit exists", limit);
+      const fromDate = from ? new Date(from) : new Date(0);
+      const toDate = to ? Date(to) : new Date();
+      const numLimit = limit ? Number(limit) : 10000;
+      console.log("queried", fromDate, toDate, limit);
+      const user = await User.aggregate([
+        { $match: { _id: new mongoose.Types.ObjectId(id) } },
+        {
+          $project: {
+            username: 1,
+            count: 1,
+            //filter the log
+            log: {
+              $filter: {
+                input: "$log",
+                as: "log",
+                // limit: numLimit,
+                cond: {
+                  $and: [
+                    {
+                      $gte: [
+                        { $dateFromString: { dateString: "$$log.date" } },
+                        fromDate,
+                      ],
+                    },
+                    {
+                      $lte: [
+                        { $dateFromString: { dateString: "$$log.date" } },
+                        toDate,
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            username: 1,
+            count: 1,
+            //limit the log
+            log: { $slice: ["$log", numLimit] },
+          },
+        },
+        {
+          $project: {
+            username: 1,
+            count: 1,
+            //remove the _id from the log
+            log: {
+              $map: {
+                input: "$log",
+                as: "log",
+                in: {
+                  description: "$$log.description",
+                  duration: "$$log.duration",
+                  date: "$$log.date",
+                },
+              },
+            },
+          },
+        },
+      ]);
+      console.log("user", user);
+      return user[0];
     }
-    //   //   .filter((log) => log.date >= from && log.date <= to)
-    //   //   .slice(0, limit);
-    // }
-    // console.log("users logs filtered", _user.log);
     return _user;
   } catch (err) {
     console.error(err);

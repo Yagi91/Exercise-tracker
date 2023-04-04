@@ -95,15 +95,15 @@ app.get("/api/users/:_id/logs", async (req, res) => {
   const id = req.params._id;
   const from = req.query.from;
   const to = req.query.to;
-  const limit = req.query.limit;
+  const limit = req.query.limit || 0;
   if (id.length !== 24) return res.status(400).json({ error: "Invalid ID" });
   try {
     console.log("Entered try");
-    if (from && to && limit) {
+    if (from || to || limit) {
       console.log("Entered if");
       if (
-        !validDateFormat.test(from) ||
-        !validDateFormat.test(to) ||
+        (!validDateFormat.test(from) && from) ||
+        (!validDateFormat.test(to) && to) ||
         isNaN(limit)
       ) {
         console.log("Entered if if");
